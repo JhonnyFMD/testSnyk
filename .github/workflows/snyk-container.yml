@@ -48,10 +48,16 @@ jobs:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       with:
         image: your/image-to-test
-        args: --file=Dockerfile --sarif-file-output=snyk.sarif
-    - name: Replace security-severity undefined for license-related findings 
-      run: sed -i 's/"security-severity":"undefined"/"security-severity":"0"/g' snyk.sarif
+        args: --file=Dockerfile
+
+      # Replace any "null" security severity values with 0. The null value is used in the case
+      # of license-related findings, which do not do not indicate a security vulnerability.
+      # See https://github.com/github/codeql-action/issues/2187 for more context.
+    - name: Post process snyk sarif file  
+      run: |
+        sed -i 's/"security-severity": "null"/"security-severity": "0"/g' snyk.sarif
+    
     - name: Upload result to GitHub Code Scanning
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@v3
       with:
         sarif_file: snyk.sarif
